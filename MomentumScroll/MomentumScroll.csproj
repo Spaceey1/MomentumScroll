@@ -29,6 +29,19 @@
 			<HintPath>$(ResonitePath)FrooxEngine.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
+		<Reference Condition="'$(Configuration)'=='Debug'" Include="ResoniteHotReloadLib">
+			<HintPath>$(ResonitePath)rml_libs\ResoniteHotReloadLib.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="FrooxEngine">
+			<HintPath>$(ResonitePath)FrooxEngine.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Elements.Core.dll">
+			<HintPath>$(ResonitePath)Elements.Core.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+
 	</ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(CopyToMods)'=='true'">
