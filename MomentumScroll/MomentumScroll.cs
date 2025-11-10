@@ -2,6 +2,7 @@ using FrooxEngine;
 using HarmonyLib;
 using ResoniteModLoader;
 using FrooxEngine.UIX;
+using Elements.Core;
 
 #if DEBUG
 using ResoniteHotReloadLib;
@@ -15,12 +16,21 @@ public class MomentumScroll : ResoniteMod {
 	public override string Author => "Space";
 	public override string Version => VERSION_CONSTANT;
 	public override string Link => "https://github.com/Spaceey1/MomentumScroll/";
-	private static List<(ScrollRect scrollRect, float velocity)> MovingScrollRects = new(); // All the scroll rects that are currently moving and their momentum
+	private static List<(ScrollRect scrollRect, float2 velocity)> MovingScrollRects = new(); // All the scroll rects that are currently moving and their momentum
+	[AutoRegisterConfigKey]
+	public static ModConfigurationKey<float> speedMultiplier = new("speedMultiplier", "Speed multiplier", ()=>0.3f);
+	[AutoRegisterConfigKey]
+	public static ModConfigurationKey<float> stopThreshold = new("stopThreshold", "Stop threshold", ()=>0.0001f);
+	[AutoRegisterConfigKey]
+	public static ModConfigurationKey<float> drag = new("drag", "Drag", ()=>0.999f);
+	private static ModConfiguration config;
 	
-	private static void Setup(){
+	private static void Setup(ResoniteMod modInstance){
 		Harmony harmony = new("com.example.MomentumScroll");
 		harmony.PatchAll();
+		config = modInstance.GetConfiguration();
 	}
+
 #if DEBUG
 	static void BeforeHotReload()
 	{
@@ -30,15 +40,16 @@ public class MomentumScroll : ResoniteMod {
 	}
 	static void OnHotReload(ResoniteMod modInstance)
 	{
-		Setup();
+		Setup(modInstance);
 		Msg("Reloaded MomentumScroll");
 	}
+
 #endif
 	public override void OnEngineInit() {
 #if DEBUG
 		HotReloader.RegisterForHotReload(this);
 #endif
-		Setup();
+		Setup(this);
 	}
 
 	[HarmonyPatch(typeof(FrooxEngine.UIX.ScrollRect), "ProcessEvent")]
@@ -46,10 +57,11 @@ public class MomentumScroll : ResoniteMod {
 		static void Postfix(ScrollRect __instance, Canvas.InteractionData eventData) {
 			switch (eventData.touch) {
 				case EventState.End:
-					float movementDirection = (eventData.position.y - eventData.lastPosition.y);
+					float2 movementDirection = ((eventData.position - eventData.lastPosition) / __instance.Time.Delta);
+					if(movementDirection.Magnitude < 0.5) return;
 					MovingScrollRects.Add((__instance, movementDirection));
 					break;
-				case EventState.Begin:
+				case EventState.Stay:
 					MovingScrollRects.RemoveAll(x => x.scrollRect == __instance);
 					break;
 				default:
@@ -67,12 +79,12 @@ public class MomentumScroll : ResoniteMod {
 					MovingScrollRects.RemoveAt(i);
 					continue;
 				}
-				scrollRect.World.RunSynchronously(()=>scrollRect.AbsolutePosition += velocity * 0.05f);
-				velocity *= 0.999f;
-
-				if (MathF.Abs(velocity) < 0.000005f) {
+				float2 endPos = scrollRect.AbsolutePosition + (velocity * scrollRect.Time.Delta * config.GetValue(speedMultiplier));
+				scrollRect.World.RunSynchronously(()=>scrollRect.AbsolutePosition = endPos);
+				if (velocity.Magnitude < config.GetValue(stopThreshold)) {
 					MovingScrollRects.RemoveAt(i);
 				} else {
+					velocity *= config.GetValue(drag);
 					MovingScrollRects[i] = (scrollRect, velocity);
 				}
 			}
