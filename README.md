@@ -1,4 +1,4 @@
-# ExampleMod
+# MomentumScroll
 
 A [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader) mod for [Resonite](https://resonite.com/) that adds mobile-like momentum scrolling to UIX.
 <!-- Edit to describe what your mod does and what it may solve -->
